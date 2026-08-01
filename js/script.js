@@ -1,25 +1,61 @@
-// ===== DATOS DE EJEMPLO =====
+// ===== APIs REALES =====
+// Radio: Radio Browser API (comunitaria, abierta, gratuita) - https://api.radio-browser.info
+// TV: transmisiones oficiales en vivo de cada canal peruano vía YouTube (embed)
+const RADIO_API = "https://de1.api.radio-browser.info";
 
-const songs = [
-  { title: "Radio Panamericana", artist: "En vivo", emoji: "📻", src: "" },
-  { title: "Cumbia Total", artist: "Mix Perú", emoji: "🎧", src: "" },
-  { title: "Huaynos Clásicos", artist: "Andina FM", emoji: "🏔️", src: "" },
-  { title: "Salsa & Sabor", artist: "Tropical Mix", emoji: "🎺", src: "" },
-  { title: "Criolla de Colección", artist: "Perú Criollo", emoji: "🎸", src: "" },
-  { title: "Top 40 Perú", artist: "Hits FM", emoji: "🔥", src: "" },
-  { title: "Chicha Sensación", artist: "Retro Mix", emoji: "🕺", src: "" },
-  { title: "Rock en Español", artist: "Perú Rock", emoji: "🎸", src: "" },
+async function radioApiGet(path) {
+  try {
+    const res = await fetch(RADIO_API + path);
+    if (!res.ok) throw new Error("Respuesta no válida de Radio Browser");
+    return await res.json();
+  } catch (e) {
+    console.warn("No se pudo conectar con Radio Browser API:", e);
+    return null;
+  }
+}
+
+function normalizeStation(s) {
+  const tagsLower = (s.tags || "").toLowerCase();
+  let emoji = "📻";
+  if (tagsLower.includes("news") || tagsLower.includes("noticias")) emoji = "📰";
+  else if (tagsLower.includes("cumbia") || tagsLower.includes("chicha")) emoji = "🎧";
+  else if (tagsLower.includes("salsa") || tagsLower.includes("tropical")) emoji = "🎺";
+  else if (tagsLower.includes("rock") || tagsLower.includes("pop")) emoji = "🎸";
+  else if (tagsLower.includes("huayno") || tagsLower.includes("andin") || tagsLower.includes("folk")) emoji = "🏔️";
+  else if (tagsLower.includes("criolla") || tagsLower.includes("vals")) emoji = "🎻";
+
+  const artistTags = s.tags
+    ? s.tags.split(",").map(t => t.trim()).filter(Boolean).slice(0, 2).join(" · ")
+    : "";
+
+  return {
+    title: (s.name || "Radio").trim(),
+    artist: artistTags || "Radio en vivo · Perú",
+    emoji,
+    url: s.url_resolved || s.url,
+    plays: s.clickcount || 0,
+    trend: s.clicktrend > 0 ? "up" : s.clicktrend < 0 ? "down" : "same",
+  };
+}
+
+// Estaciones de respaldo si no hay conexión con la API
+const DEMO_STATIONS = [
+  { title: "Radio Panamericana", artist: "En vivo", emoji: "📻", url: null, plays: 128000, trend: "up" },
+  { title: "Cumbia Total", artist: "Mix Perú", emoji: "🎧", url: null, plays: 104000, trend: "up" },
+  { title: "Huaynos Clásicos", artist: "Andina FM", emoji: "🏔️", url: null, plays: 98000, trend: "same" },
+  { title: "Salsa & Sabor", artist: "Tropical Mix", emoji: "🎺", url: null, plays: 87000, trend: "down" },
+  { title: "Criolla de Colección", artist: "Perú Criollo", emoji: "🎻", url: null, plays: 76000, trend: "up" },
+  { title: "Top 40 Perú", artist: "Hits FM", emoji: "🔥", url: null, plays: 65000, trend: "same" },
 ];
 
+// Canales de TV peruanos: transmisión oficial en vivo vía su canal de YouTube
 const tvChannels = [
-  { name: "América TV", cat: "Señal abierta", initial: "A" },
-  { name: "Latina", cat: "Señal abierta", initial: "L" },
-  { name: "TV Perú", cat: "Canal estatal", initial: "TVP" },
-  { name: "ATV", cat: "Señal abierta", initial: "ATV" },
-  { name: "Panamericana TV", cat: "Señal abierta", initial: "P" },
-  { name: "Willax TV", cat: "Señal abierta", initial: "W" },
-  { name: "Canal N", cat: "Noticias 24h", initial: "N" },
-  { name: "RPP TV", cat: "Noticias 24h", initial: "RPP" },
+  { name: "América Noticias", cat: "Señal en vivo", initial: "A", channelId: "UCPhm2I2wk4vqjENwhn3px8A" },
+  { name: "Latina Noticias", cat: "Señal en vivo", initial: "L", channelId: "UCpSJ5fGhmAME9Kx2D3ZvN3Q" },
+  { name: "TV Perú", cat: "Canal estatal", initial: "TVP", channelId: "UCrAb_x80PtTiN3lCkQOSFPg" },
+  { name: "Panamericana TV", cat: "Señal en vivo", initial: "P", channelId: "UCBpoh0HUeCexMHidDxQJEEQ" },
+  { name: "Willax TV", cat: "Señal en vivo", initial: "W", channelId: "UCvXfjv_grfmMtlY5R8kSrLA" },
+  { name: "RPP TV", cat: "Noticias 24h", initial: "RPP", channelId: "UC5j8-2FT0ZMMBkmK72R4aeA" },
 ];
 
 const news = [
@@ -29,14 +65,6 @@ const news = [
   { tag: "Cultura", title: "Nueva plataforma digital impulsa la música independiente", excerpt: "Productores locales encuentran un espacio para difundir su trabajo.", emoji: "🎹", date: "Ayer" },
   { tag: "Deportes", title: "Selección peruana se prepara para próximos amistosos", excerpt: "El equipo nacional afina detalles de cara a la nueva fecha FIFA.", emoji: "⚽", date: "Ayer" },
   { tag: "Tecnología", title: "El streaming en vivo crece con fuerza entre usuarios peruanos", excerpt: "Cada vez más personas consumen radio y TV a través de internet.", emoji: "💻", date: "Hace 2 días" },
-];
-
-const trending = [
-  { rank: 1, songIndex: 1, plays: "128K", trend: "up" },
-  { rank: 2, songIndex: 5, plays: "104K", trend: "up" },
-  { rank: 3, songIndex: 3, plays: "98K", trend: "same" },
-  { rank: 4, songIndex: 2, plays: "87K", trend: "down" },
-  { rank: 5, songIndex: 6, plays: "76K", trend: "up" },
 ];
 
 const premieres = [
@@ -68,10 +96,11 @@ document.querySelectorAll(".nav-link").forEach(link => {
   });
 });
 
-// ===== MÚSICA =====
+// ===== MÚSICA (radios reales del Perú) =====
 const musicGrid = document.getElementById("musicGrid");
 const audioPlayer = document.getElementById("audioPlayer");
 const playerBar = document.getElementById("playerBar");
+const playerProgress = document.getElementById("playerProgress");
 const playerTitle = document.getElementById("playerTitle");
 const playerArtist = document.getElementById("playerArtist");
 const playerCover = document.getElementById("playerCover");
@@ -79,119 +108,168 @@ const playBtn = document.getElementById("playBtn");
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
 const progressFill = document.getElementById("progressFill");
+const liveIndicator = document.getElementById("liveIndicator");
 const volumeSlider = document.getElementById("volumeSlider");
 
-let currentSongIndex = -1;
-let isPlaying = false;
+let stations = [];
+let currentStationIndex = -1;
+let isDemoPlaying = false;
+
+function formatPlays(n) {
+  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "K";
+  return String(n);
+}
+
+async function loadStations() {
+  musicGrid.innerHTML = `<div class="music-grid-loading">Cargando radios peruanas en vivo…</div>`;
+  const data = await radioApiGet("/json/stations/bycountry/Peru?limit=30&order=clickcount&reverse=true&hidebroken=true");
+
+  let list = [];
+  if (data && Array.isArray(data)) {
+    list = data
+      .filter(s => s.url_resolved && !s.hls)
+      .map(normalizeStation)
+      .slice(0, 12);
+  }
+
+  stations = list.length ? list : DEMO_STATIONS;
+  renderMusic();
+  renderTrending();
+}
 
 function renderMusic() {
-  musicGrid.innerHTML = songs.map((song, i) => `
+  musicGrid.innerHTML = stations.map((station, i) => `
     <div class="music-card" data-index="${i}">
       <div class="music-cover">
-        ${song.emoji}
+        ${station.emoji}
         <div class="play-overlay">▶</div>
       </div>
       <div class="music-info">
-        <div class="title">${song.title}</div>
-        <div class="artist">${song.artist}</div>
+        <div class="title">${station.title}</div>
+        <div class="artist">${station.artist}</div>
       </div>
     </div>
   `).join("");
 
   document.querySelectorAll(".music-card").forEach(card => {
-    card.addEventListener("click", () => {
-      const i = Number(card.dataset.index);
-      loadSong(i);
-    });
+    card.addEventListener("click", () => loadStation(Number(card.dataset.index)));
   });
 }
 
-function loadSong(i) {
-  currentSongIndex = i;
-  const song = songs[i];
-  playerTitle.textContent = song.title;
-  playerArtist.textContent = song.artist;
+function loadStation(i) {
+  currentStationIndex = i;
+  playAdHocStation(stations[i], i);
+}
+
+function playAdHocStation(station, gridIndex = -1) {
+  playerTitle.textContent = station.title;
+  playerArtist.textContent = station.artist;
   playerCover.style.display = "none";
   playerBar.classList.add("visible");
 
-  document.querySelectorAll(".music-card").forEach(c => c.classList.remove("playing"));
-  document.querySelector(`.music-card[data-index="${i}"]`).classList.add("playing");
+  document.querySelectorAll(".music-card, .trending-item").forEach(c => c.classList.remove("playing"));
+  if (gridIndex > -1) {
+    const card = document.querySelector(`.music-card[data-index="${gridIndex}"]`);
+    if (card) card.classList.add("playing");
+    const trendItem = document.querySelector(`.trending-item[data-index="${gridIndex}"]`);
+    if (trendItem) trendItem.classList.add("playing");
+  }
 
-  // Simulación de reproducción (sin archivo de audio real de demostración)
-  isPlaying = true;
-  playBtn.textContent = "⏸";
-  simulateProgress();
+  if (station.url) {
+    playerProgress.classList.add("live");
+    liveIndicator.classList.add("visible");
+    isDemoPlaying = false;
+    audioPlayer.src = station.url;
+    audioPlayer.play().catch(() => {
+      playerArtist.textContent = "No se pudo conectar con esta radio, prueba otra";
+    });
+  } else {
+    playerProgress.classList.remove("live");
+    liveIndicator.classList.remove("visible");
+    audioPlayer.pause();
+    audioPlayer.removeAttribute("src");
+    isDemoPlaying = true;
+    playBtn.textContent = "⏸";
+    simulateDemoProgress();
+  }
 }
 
-function simulateProgress() {
+function simulateDemoProgress() {
   let progress = 0;
   clearInterval(window._progressInterval);
   progressFill.style.width = "0%";
   window._progressInterval = setInterval(() => {
-    if (!isPlaying) return;
+    if (!isDemoPlaying) return;
     progress += 0.5;
     if (progress >= 100) progress = 0;
     progressFill.style.width = progress + "%";
   }, 150);
 }
 
+audioPlayer.addEventListener("playing", () => { playBtn.textContent = "⏸"; });
+audioPlayer.addEventListener("pause", () => { playBtn.textContent = "▶"; });
+audioPlayer.addEventListener("error", () => {
+  if (currentStationIndex > -1 || audioPlayer.src) {
+    playerArtist.textContent = "Señal no disponible ahora mismo, prueba otra radio";
+  }
+});
+
 playBtn.addEventListener("click", () => {
-  if (currentSongIndex === -1) { loadSong(0); return; }
-  isPlaying = !isPlaying;
-  playBtn.textContent = isPlaying ? "⏸" : "▶";
+  if (currentStationIndex === -1 && !audioPlayer.src) { if (stations.length) loadStation(0); return; }
+  const station = stations[currentStationIndex];
+  if (station && station.url) {
+    if (audioPlayer.paused) audioPlayer.play(); else audioPlayer.pause();
+  } else if (audioPlayer.src) {
+    if (audioPlayer.paused) audioPlayer.play(); else audioPlayer.pause();
+  } else {
+    isDemoPlaying = !isDemoPlaying;
+    playBtn.textContent = isDemoPlaying ? "⏸" : "▶";
+  }
 });
 
 prevBtn.addEventListener("click", () => {
-  if (currentSongIndex <= 0) return;
-  loadSong(currentSongIndex - 1);
+  if (currentStationIndex <= 0) return;
+  loadStation(currentStationIndex - 1);
 });
 
 nextBtn.addEventListener("click", () => {
-  if (currentSongIndex === -1 || currentSongIndex >= songs.length - 1) return;
-  loadSong(currentSongIndex + 1);
+  if (currentStationIndex === -1 || currentStationIndex >= stations.length - 1) return;
+  loadStation(currentStationIndex + 1);
 });
 
 volumeSlider.addEventListener("input", () => {
   audioPlayer.volume = volumeSlider.value / 100;
 });
 
-renderMusic();
-
-// ===== TENDENCIAS =====
+// ===== TENDENCIAS (más sonadas, según popularidad real de Radio Browser) =====
 const trendingList = document.getElementById("trendingList");
 const trendSymbols = { up: "▲", down: "▼", same: "▬" };
 
 function renderTrending() {
-  trendingList.innerHTML = trending.map(t => {
-    const song = songs[t.songIndex];
-    return `
-      <div class="trending-item" data-song-index="${t.songIndex}">
-        <div class="trending-rank">${t.rank}</div>
-        <div class="trending-icon">${song.emoji}</div>
-        <div class="trending-body">
-          <div class="trending-title">${song.title}</div>
-          <div class="trending-artist">${song.artist}</div>
-        </div>
-        <div class="trending-stats">
-          <span class="trending-plays">${t.plays}</span>
-          <span class="trend-${t.trend}">${trendSymbols[t.trend]}</span>
-        </div>
-        <button class="trending-play-btn">▶</button>
+  const top = stations.slice(0, 5);
+  trendingList.innerHTML = top.map((station, i) => `
+    <div class="trending-item" data-index="${i}">
+      <div class="trending-rank">${i + 1}</div>
+      <div class="trending-icon">${station.emoji}</div>
+      <div class="trending-body">
+        <div class="trending-title">${station.title}</div>
+        <div class="trending-artist">${station.artist}</div>
       </div>
-    `;
-  }).join("");
+      <div class="trending-stats">
+        <span class="trending-plays">${formatPlays(station.plays)}</span>
+        <span class="trend-${station.trend}">${trendSymbols[station.trend]}</span>
+      </div>
+      <button class="trending-play-btn">▶</button>
+    </div>
+  `).join("");
 
   document.querySelectorAll(".trending-item").forEach(item => {
     item.addEventListener("click", () => {
-      loadSong(Number(item.dataset.songIndex));
-      document.querySelectorAll(".trending-item").forEach(t => t.classList.remove("playing"));
-      item.classList.add("playing");
+      loadStation(Number(item.dataset.index));
       document.getElementById("musica").scrollIntoView({ behavior: "smooth" });
     });
   });
 }
-
-renderTrending();
 
 // ===== ESTRENOS =====
 const premiereGrid = document.getElementById("premiereGrid");
@@ -234,10 +312,12 @@ videoModal.addEventListener("click", (e) => { if (e.target === videoModal) video
 
 renderPremieres();
 
-// ===== TV EN VIVO =====
+// ===== TV EN VIVO (transmisión oficial de cada canal vía YouTube) =====
 const tvChannelList = document.getElementById("tvChannelList");
+const tvScreen = document.getElementById("tvScreen");
 const tvChannelName = document.getElementById("tvChannelName");
 const tvInfoName = document.getElementById("tvInfoName");
+const tvYoutubeLink = document.getElementById("tvYoutubeLink");
 
 function renderChannels() {
   tvChannelList.innerHTML = tvChannels.map((ch, i) => `
@@ -251,10 +331,7 @@ function renderChannels() {
   `).join("");
 
   document.querySelectorAll(".tv-channel-item").forEach(item => {
-    item.addEventListener("click", () => {
-      const i = Number(item.dataset.index);
-      selectChannel(i);
-    });
+    item.addEventListener("click", () => selectChannel(Number(item.dataset.index)));
   });
 }
 
@@ -262,11 +339,16 @@ function selectChannel(i) {
   const ch = tvChannels[i];
   tvChannelName.textContent = ch.name;
   tvInfoName.textContent = ch.name;
+  tvYoutubeLink.href = `https://www.youtube.com/channel/${ch.channelId}/live`;
+  tvScreen.innerHTML = `<iframe src="https://www.youtube.com/embed/live_stream?channel=${ch.channelId}&autoplay=1&mute=1" title="${ch.name} en vivo" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+
   document.querySelectorAll(".tv-channel-item").forEach(c => c.classList.remove("active"));
-  document.querySelector(`.tv-channel-item[data-index="${i}"]`).classList.add("active");
+  const item = document.querySelector(`.tv-channel-item[data-index="${i}"]`);
+  if (item) item.classList.add("active");
 }
 
 renderChannels();
+selectChannel(0);
 
 // ===== NOTICIAS =====
 const newsGrid = document.getElementById("newsGrid");
@@ -287,7 +369,7 @@ function renderNews() {
 
 renderNews();
 
-// ===== CHAT INTERACTIVO =====
+// ===== CHAT INTERACTIVO (comunidad) =====
 const chatWidget = document.getElementById("chatWidget");
 const chatFab = document.getElementById("chatFab");
 const chatCloseBtn = document.getElementById("chatCloseBtn");
@@ -346,18 +428,35 @@ aiFab.addEventListener("click", () => {
 });
 aiCloseBtn.addEventListener("click", () => aiWidget.classList.remove("open"));
 
-// Base de conocimiento simple para las recomendaciones del agente
-const genreMap = {
-  cumbia: [1, 6], chicha: [6], salsa: [3], tropical: [3],
-  huayno: [2], andina: [2], andino: [2], criolla: [4], vals: [4],
-  rock: [7], pop: [5],
+// Géneros y estados de ánimo mapeados a etiquetas reales de Radio Browser
+const genreTagMap = {
+  cumbia: "cumbia", chicha: "chicha", salsa: "salsa", tropical: "tropical",
+  huayno: "huayno", andina: "andina", andino: "andina", criolla: "criolla", vals: "vals",
+  rock: "rock", pop: "pop", reggaeton: "reggaeton", bachata: "bachata",
+  romantica: "romantica", cristiana: "cristiana",
 };
-const moodMap = {
-  fiesta: [1, 3, 6], bailar: [1, 3, 6],
-  relajar: [2, 4], tranquilo: [2, 4], calma: [2, 4],
-  triste: [4, 2], nostalgia: [4, 2],
-  alegre: [1, 3, 5], animo: [1, 3, 5],
+const moodTagMap = {
+  fiesta: "cumbia", bailar: "salsa",
+  relajar: "criolla", tranquilo: "criolla", calma: "criolla",
+  triste: "criolla", nostalgia: "criolla",
+  alegre: "salsa", animo: "cumbia",
 };
+
+let aiStationCache = {};
+let aiCacheCounter = 0;
+
+async function searchStationsByTag(tag) {
+  let data = await radioApiGet(`/json/stations/bytagandcountry/${encodeURIComponent(tag)}/Peru?limit=8&order=clickcount&reverse=true&hidebroken=true`);
+  let list = Array.isArray(data) ? data : [];
+
+  // Si no hay resultados por etiqueta exacta, buscamos por nombre de estación
+  if (!list.length) {
+    data = await radioApiGet(`/json/stations/search?country=Peru&name=${encodeURIComponent(tag)}&limit=8&order=clickcount&reverse=true&hidebroken=true`);
+    list = Array.isArray(data) ? data : [];
+  }
+
+  return list.filter(s => s.url_resolved && !s.hls).map(normalizeStation).slice(0, 3);
+}
 
 function aiAddMessage(html, isUser = false) {
   const div = document.createElement("div");
@@ -368,7 +467,13 @@ function aiAddMessage(html, isUser = false) {
 }
 
 function songChip(index) {
-  return `<button class="ai-chip" data-action="song" data-index="${index}">▶ ${songs[index].title}</button>`;
+  const station = stations[index];
+  return `<button class="ai-chip" data-action="song" data-index="${index}">▶ ${station.title}</button>`;
+}
+function aiStationChip(station) {
+  const key = "ai" + (aiCacheCounter++);
+  aiStationCache[key] = station;
+  return `<button class="ai-chip" data-action="ai-station" data-key="${key}">▶ ${station.title}</button>`;
 }
 function channelChip(index) {
   return `<button class="ai-chip" data-action="channel" data-index="${index}">📺 ${tvChannels[index].name}</button>`;
@@ -386,20 +491,29 @@ aiMessages.addEventListener("click", (e) => {
   const chip = e.target.closest(".ai-chip");
   if (!chip) return;
   const action = chip.dataset.action;
-  const index = Number(chip.dataset.index);
   if (action === "song") {
-    loadSong(index);
+    loadStation(Number(chip.dataset.index));
     document.getElementById("musica").scrollIntoView({ behavior: "smooth" });
+  } else if (action === "ai-station") {
+    const station = aiStationCache[chip.dataset.key];
+    if (station) {
+      currentStationIndex = -1;
+      playAdHocStation(station);
+      document.getElementById("musica").scrollIntoView({ behavior: "smooth" });
+    }
   } else if (action === "channel") {
-    selectChannel(index);
+    selectChannel(Number(chip.dataset.index));
     document.getElementById("tv").scrollIntoView({ behavior: "smooth" });
   } else if (action === "premiere") {
-    playPremiere(index);
+    playPremiere(Number(chip.dataset.index));
+  } else if (chip.dataset.quick) {
+    aiInput.value = chip.dataset.quick;
+    aiForm.dispatchEvent(new Event("submit"));
   }
 });
 
 function aiGreet() {
-  aiAddMessage("¡Hola! Soy tu asistente musical con IA 🤖 Puedo recomendarte música según tu gusto o ánimo, mostrarte lo más sonado, sugerirte estrenos de video o un canal de TV en vivo.");
+  aiAddMessage("¡Hola! Soy tu asistente musical con IA 🤖 Conecto en vivo con radios peruanas reales y canales de TV oficiales. Puedo recomendarte música según tu gusto o ánimo, mostrarte lo más sonado, sugerirte estrenos de video o un canal en vivo.");
   renderQuickSuggestions();
 }
 
@@ -428,12 +542,15 @@ function aiGenerateReply(rawText) {
     return () => aiAddMessage("¡Hola! ¿Buscas música, TV en vivo o los últimos estrenos? Cuéntame qué te provoca 🎧");
   }
 
-  // Tendencias / más sonadas
+  // Tendencias / más sonadas (datos reales de popularidad)
   if (/(tendencia|sonada|popular|ranking|top)/.test(text)) {
-    return () => aiRespondWithChips(
-      "Esto es lo más sonado ahora mismo en PerúStream:",
-      trending.slice(0, 3).map(t => songChip(t.songIndex)).join("")
-    );
+    return () => {
+      if (!stations.length) { aiAddMessage("Aún estoy cargando las radios, dame un segundo y vuelve a preguntar 🙏"); return; }
+      aiRespondWithChips(
+        "Esto es lo más sonado ahora mismo en PerúStream:",
+        stations.slice(0, 3).map((_, i) => songChip(i)).join("")
+      );
+    };
   }
 
   // Estrenos / videos
@@ -456,41 +573,51 @@ function aiGenerateReply(rawText) {
     );
   }
 
-  // Género musical
-  for (const genre in genreMap) {
+  // Género musical (búsqueda real en Radio Browser)
+  for (const genre in genreTagMap) {
     if (text.includes(genre)) {
-      const indexes = genreMap[genre];
-      return () => aiRespondWithChips(
-        `¡Buena elección! Aquí tienes música de ${genre}:`,
-        indexes.map(songChip).join("")
-      );
+      const tag = genreTagMap[genre];
+      return async () => {
+        const results = await searchStationsByTag(tag);
+        if (results.length) {
+          aiRespondWithChips(`Encontré estas radios peruanas de ${genre} en vivo:`, results.map(aiStationChip).join(""));
+        } else if (stations.length) {
+          aiRespondWithChips(`No encontré una radio de "${genre}" en vivo ahora mismo, prueba con esto:`, stations.slice(0, 3).map((_, i) => songChip(i)).join(""));
+        } else {
+          aiAddMessage(`No encontré radios de "${genre}" disponibles en este momento.`);
+        }
+      };
     }
   }
 
-  // Estado de ánimo
-  for (const mood in moodMap) {
+  // Estado de ánimo (también busca en vivo)
+  for (const mood in moodTagMap) {
     if (text.includes(mood)) {
-      const indexes = moodMap[mood];
-      return () => aiRespondWithChips(
-        `Según tu ánimo, te sugiero escuchar esto:`,
-        indexes.map(songChip).join("")
-      );
+      const tag = moodTagMap[mood];
+      return async () => {
+        const results = await searchStationsByTag(tag);
+        if (results.length) {
+          aiRespondWithChips(`Según tu ánimo, te sugiero escuchar esto:`, results.map(aiStationChip).join(""));
+        } else if (stations.length) {
+          aiRespondWithChips(`Prueba con esto mientras tanto:`, stations.slice(0, 3).map((_, i) => songChip(i)).join(""));
+        }
+      };
     }
   }
 
   // Recomendación genérica
   if (/(recomien|sugier|suger|quiero escuchar|ponme|pon algo)/.test(text)) {
-    const randomIndexes = songs.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, 3);
-    return () => aiRespondWithChips(
-      "Te dejo una selección para ti:",
-      randomIndexes.map(songChip).join("")
-    );
+    return () => {
+      if (!stations.length) { aiAddMessage("Aún estoy cargando las radios, dame un segundo y vuelve a preguntar 🙏"); return; }
+      const randomIndexes = stations.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, 3);
+      aiRespondWithChips("Te dejo una selección para ti:", randomIndexes.map(songChip).join(""));
+    };
   }
 
   // Fallback
   return () => aiRespondWithChips(
     "No estoy segura de haber entendido, pero puedo ayudarte con esto:",
-    ["Más sonadas", "Cumbia", "Relajarme", "Estrenos", "Canal"].map((q, i) =>
+    ["Más sonadas", "Cumbia", "Relajarme", "Estrenos", "Canal"].map(q =>
       `<button class="ai-chip" data-quick="${q}">${q}</button>`
     ).join("")
   );
@@ -504,13 +631,8 @@ aiForm.addEventListener("submit", (e) => {
   aiInput.value = "";
 
   const respond = aiGenerateReply(text);
-  setTimeout(respond, 500 + Math.random() * 500);
+  setTimeout(respond, 400 + Math.random() * 400);
 });
 
-// Chips de fallback rápido (delegación adicional para data-quick)
-aiMessages.addEventListener("click", (e) => {
-  const quick = e.target.closest("[data-quick]");
-  if (!quick) return;
-  aiInput.value = quick.dataset.quick;
-  aiForm.dispatchEvent(new Event("submit"));
-});
+// ===== Inicio: cargar datos reales =====
+loadStations();

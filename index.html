@@ -57,8 +57,9 @@
       <button id="playBtn" class="player-btn play">▶</button>
       <button id="nextBtn" class="player-btn">⏭</button>
     </div>
-    <div class="player-progress">
-      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="player-progress" id="playerProgress">
+      <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+      <span class="live-indicator" id="liveIndicator">🔴 EN VIVO</span>
     </div>
     <div class="player-volume">
       🔊 <input type="range" id="volumeSlider" min="0" max="100" value="70">
@@ -89,7 +90,7 @@
 <section class="section section-alt" id="tv">
   <div class="section-header">
     <h2>📺 Canales de TV Peruanos en Vivo</h2>
-    <p>Selecciona un canal para verlo (contenido de demostración)</p>
+    <p>Transmisión oficial vía YouTube en vivo — selecciona un canal</p>
   </div>
 
   <div class="tv-layout">
@@ -102,7 +103,7 @@
       </div>
       <div class="tv-info">
         <strong id="tvInfoName">América TV</strong>
-        <span class="live-badge">● EN VIVO</span>
+        <a href="#" id="tvYoutubeLink" target="_blank" rel="noopener" class="live-badge tv-youtube-link">Ver en YouTube ↗</a>
       </div>
     </div>
     <div class="tv-channel-list" id="tvChannelList"></div>
