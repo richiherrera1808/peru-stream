@@ -28,11 +28,13 @@ function normalizeStation(s) {
     ? s.tags.split(",").map(t => t.trim()).filter(Boolean).slice(0, 2).join(" · ")
     : "";
 
+  const url = s.url_resolved || s.url;
   return {
     title: (s.name || "Radio").trim(),
     artist: artistTags || "Radio en vivo · Perú",
     emoji,
-    url: s.url_resolved || s.url,
+    url,
+    isHls: !!s.hls || /\.m3u8($|\?)/i.test(url || ""),
     plays: s.clickcount || 0,
     trend: s.clicktrend > 0 ? "up" : s.clicktrend < 0 ? "down" : "same",
   };
@@ -160,7 +162,7 @@ async function loadStations(country = currentCountry) {
   let list = [];
   if (data && Array.isArray(data)) {
     list = data
-      .filter(s => s.url_resolved && !s.hls)
+      .filter(s => s.url_resolved)
       .map(normalizeStation)
       .slice(0, 12);
   }
@@ -199,6 +201,40 @@ function loadStation(i) {
   playAdHocStation(stations[i], i);
 }
 
+// Reproduce streams directos (mp3/aac) y también HLS (.m3u8) usando hls.js
+let hlsInstance = null;
+
+function playStreamUrl(url, isHls) {
+  if (hlsInstance) {
+    hlsInstance.destroy();
+    hlsInstance = null;
+  }
+
+  const canPlayNativeHls = audioPlayer.canPlayType("application/vnd.apple.mpegurl");
+
+  if (isHls && !canPlayNativeHls) {
+    if (typeof Hls !== "undefined" && Hls.isSupported()) {
+      hlsInstance = new Hls();
+      hlsInstance.loadSource(url);
+      hlsInstance.attachMedia(audioPlayer);
+      hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          playerArtist.textContent = "No se pudo conectar con esta radio (HLS), prueba otra";
+        }
+      });
+      audioPlayer.play().catch(() => {});
+    } else {
+      playerArtist.textContent = "Tu navegador no soporta este tipo de transmisión (HLS)";
+    }
+    return;
+  }
+
+  audioPlayer.src = url;
+  audioPlayer.play().catch(() => {
+    playerArtist.textContent = "No se pudo conectar con esta radio, prueba otra";
+  });
+}
+
 function playAdHocStation(station, gridIndex = -1) {
   playerTitle.textContent = station.title;
   playerArtist.textContent = station.artist;
@@ -217,13 +253,11 @@ function playAdHocStation(station, gridIndex = -1) {
     playerProgress.classList.add("live");
     liveIndicator.classList.add("visible");
     isDemoPlaying = false;
-    audioPlayer.src = station.url;
-    audioPlayer.play().catch(() => {
-      playerArtist.textContent = "No se pudo conectar con esta radio, prueba otra";
-    });
+    playStreamUrl(station.url, station.isHls);
   } else {
     playerProgress.classList.remove("live");
     liveIndicator.classList.remove("visible");
+    if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
     audioPlayer.pause();
     audioPlayer.removeAttribute("src");
     isDemoPlaying = true;
@@ -506,7 +540,7 @@ async function searchStationsByTag(tag) {
     list = Array.isArray(data) ? data : [];
   }
 
-  return list.filter(s => s.url_resolved && !s.hls).map(normalizeStation).slice(0, 3);
+  return list.filter(s => s.url_resolved).map(normalizeStation).slice(0, 3);
 }
 
 function aiAddMessage(html, isUser = false) {
