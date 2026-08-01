@@ -33,6 +33,7 @@ function normalizeStation(s) {
     title: (s.name || "Radio").trim(),
     artist: artistTags || "Radio en vivo · Perú",
     emoji,
+    logo: s.favicon && /^https?:\/\//.test(s.favicon) ? s.favicon : null,
     url,
     isHls: !!s.hls || /\.m3u8($|\?)/i.test(url || ""),
     plays: s.clickcount || 0,
@@ -84,12 +85,12 @@ const COUNTRIES = [
 ];
 
 const news = [
-  { tag: "Música", title: "Festival de música andina reúne a miles en Cusco", excerpt: "El evento celebró la fusión entre ritmos tradicionales y sonidos modernos.", emoji: "🎶", date: "Hace 2 horas" },
-  { tag: "TV", title: "Canales peruanos estrenan nueva programación nocturna", excerpt: "Las señales locales renuevan su parrilla con series y magazines.", emoji: "📺", date: "Hace 5 horas" },
-  { tag: "Entretenimiento", title: "Artistas peruanos preparan gira nacional para fin de año", excerpt: "La gira recorrerá diez ciudades del país con entrada libre.", emoji: "🎤", date: "Hoy" },
-  { tag: "Cultura", title: "Nueva plataforma digital impulsa la música independiente", excerpt: "Productores locales encuentran un espacio para difundir su trabajo.", emoji: "🎹", date: "Ayer" },
-  { tag: "Deportes", title: "Selección peruana se prepara para próximos amistosos", excerpt: "El equipo nacional afina detalles de cara a la nueva fecha FIFA.", emoji: "⚽", date: "Ayer" },
-  { tag: "Tecnología", title: "El streaming en vivo crece con fuerza entre usuarios peruanos", excerpt: "Cada vez más personas consumen radio y TV a través de internet.", emoji: "💻", date: "Hace 2 días" },
+  { tag: "Música", title: "Festival de música andina reúne a miles en Cusco", excerpt: "El evento celebró la fusión entre ritmos tradicionales y sonidos modernos.", emoji: "🎶", date: "Hace 2 horas", img: "https://picsum.photos/seed/perustream-musica/500/300" },
+  { tag: "TV", title: "Canales peruanos estrenan nueva programación nocturna", excerpt: "Las señales locales renuevan su parrilla con series y magazines.", emoji: "📺", date: "Hace 5 horas", img: "https://picsum.photos/seed/perustream-tv/500/300" },
+  { tag: "Entretenimiento", title: "Artistas peruanos preparan gira nacional para fin de año", excerpt: "La gira recorrerá diez ciudades del país con entrada libre.", emoji: "🎤", date: "Hoy", img: "https://picsum.photos/seed/perustream-gira/500/300" },
+  { tag: "Cultura", title: "Nueva plataforma digital impulsa la música independiente", excerpt: "Productores locales encuentran un espacio para difundir su trabajo.", emoji: "🎹", date: "Ayer", img: "https://picsum.photos/seed/perustream-cultura/500/300" },
+  { tag: "Deportes", title: "Selección peruana se prepara para próximos amistosos", excerpt: "El equipo nacional afina detalles de cara a la nueva fecha FIFA.", emoji: "⚽", date: "Ayer", img: "https://picsum.photos/seed/perustream-deportes/500/300" },
+  { tag: "Tecnología", title: "El streaming en vivo crece con fuerza entre usuarios peruanos", excerpt: "Cada vez más personas consumen radio y TV a través de internet.", emoji: "💻", date: "Hace 2 días", img: "https://picsum.photos/seed/perustream-tech/500/300" },
 ];
 
 const premieres = [
@@ -209,11 +210,18 @@ async function loadStations(country = currentCountry) {
   renderTrending();
 }
 
+function stationCoverHtml(station) {
+  if (station.logo) {
+    return `<img src="${station.logo}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${station.emoji}'}))">`;
+  }
+  return station.emoji;
+}
+
 function renderMusic() {
   musicGrid.innerHTML = stations.map((station, i) => `
     <div class="music-card" data-index="${i}">
       <div class="music-cover">
-        ${station.emoji}
+        ${stationCoverHtml(station)}
         <div class="play-overlay">▶</div>
       </div>
       <div class="music-info">
@@ -354,7 +362,7 @@ function renderTrending() {
   trendingList.innerHTML = top.map((station, i) => `
     <div class="trending-item" data-index="${i}">
       <div class="trending-rank">${i + 1}</div>
-      <div class="trending-icon">${station.emoji}</div>
+      <div class="trending-icon">${stationCoverHtml(station)}</div>
       <div class="trending-body">
         <div class="trending-title">${station.title}</div>
         <div class="trending-artist">${station.artist}</div>
@@ -552,7 +560,9 @@ const newsGrid = document.getElementById("newsGrid");
 function renderNews() {
   newsGrid.innerHTML = news.map(n => `
     <div class="news-card">
-      <div class="news-image">${n.emoji}</div>
+      <div class="news-image">
+        ${n.img ? `<img src="${n.img}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${n.emoji}'}))">` : n.emoji}
+      </div>
       <div class="news-body">
         <div class="news-tag">${n.tag}</div>
         <div class="news-title">${n.title}</div>

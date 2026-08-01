@@ -270,6 +270,12 @@ img { max-width: 100%; display: block; }
   justify-content: center;
   font-size: 2.2rem;
   position: relative;
+  overflow: hidden;
+}
+.music-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .music-cover .play-overlay {
   position: absolute;
@@ -460,6 +466,12 @@ img { max-width: 100%; display: block; }
   background: linear-gradient(135deg, var(--surface-hover), var(--bg-alt));
   display: flex; align-items: center; justify-content: center;
   font-size: 2rem;
+  overflow: hidden;
+}
+.news-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .news-body { padding: 16px; }
@@ -598,6 +610,12 @@ img { max-width: 100%; display: block; }
   display: flex; align-items: center; justify-content: center;
   font-size: 1.3rem;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.trending-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .trending-body { flex: 1; min-width: 0; }
