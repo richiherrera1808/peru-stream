@@ -137,6 +137,45 @@ img { max-width: 100%; display: block; }
 .section-header h2 { font-size: 1.8rem; margin-bottom: 8px; }
 .section-header p { color: var(--text-dim); }
 
+.country-select-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+.country-select-wrap select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.country-select-wrap select:hover { border-color: var(--primary); }
+
+.tv-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.tv-tab {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 9px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.tv-tab:hover { color: var(--text); }
+.tv-tab.active { border-color: var(--primary); color: var(--text); background: rgba(230,57,70,0.12); }
+
 /* MUSIC */
 .music-grid {
   display: grid;

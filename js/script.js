@@ -58,6 +58,29 @@ const tvChannels = [
   { name: "RPP TV", cat: "Noticias 24h", initial: "RPP", channelId: "UC5j8-2FT0ZMMBkmK72R4aeA" },
 ];
 
+// Canales internacionales de noticias: transmisión oficial en vivo vía YouTube
+const internationalChannels = [
+  { name: "CNN en Español", cat: "Internacional", initial: "CNN", channelId: "UC_lEiu6917IJz03TnntWUaQ" },
+  { name: "BBC News", cat: "Internacional", initial: "BBC", channelId: "UCRQBgGsCMrS_UN0W3RsFoAw" },
+  { name: "France 24 Español", cat: "Internacional", initial: "F24", channelId: "UCUdOoVWuWmgo1wByzcsyKDQ" },
+  { name: "DW Español", cat: "Internacional", initial: "DW", channelId: "UCT4Jg8h03dD0iN3Pb5L0PMA" },
+  { name: "Al Jazeera English", cat: "Internacional", initial: "AJ", channelId: "UCNye-wNBqNL5ZzHSJj3l8Bg" },
+];
+
+// Países disponibles para radio en vivo (Radio Browser API)
+const COUNTRIES = [
+  { label: "🇵🇪 Perú", value: "Peru" },
+  { label: "🇨🇴 Colombia", value: "Colombia" },
+  { label: "🇲🇽 México", value: "Mexico" },
+  { label: "🇦🇷 Argentina", value: "Argentina" },
+  { label: "🇨🇱 Chile", value: "Chile" },
+  { label: "🇪🇸 España", value: "Spain" },
+  { label: "🇺🇸 Estados Unidos", value: "United States" },
+  { label: "🇧🇷 Brasil", value: "Brazil" },
+  { label: "🇪🇨 Ecuador", value: "Ecuador" },
+  { label: "🇧🇴 Bolivia", value: "Bolivia" },
+];
+
 const news = [
   { tag: "Música", title: "Festival de música andina reúne a miles en Cusco", excerpt: "El evento celebró la fusión entre ritmos tradicionales y sonidos modernos.", emoji: "🎶", date: "Hace 2 horas" },
   { tag: "TV", title: "Canales peruanos estrenan nueva programación nocturna", excerpt: "Las señales locales renuevan su parrilla con series y magazines.", emoji: "📺", date: "Hace 5 horas" },
@@ -114,15 +137,25 @@ const volumeSlider = document.getElementById("volumeSlider");
 let stations = [];
 let currentStationIndex = -1;
 let isDemoPlaying = false;
+let currentCountry = "Peru";
+
+const countrySelect = document.getElementById("countrySelect");
+countrySelect.innerHTML = COUNTRIES.map(c => `<option value="${c.value}">${c.label}</option>`).join("");
+countrySelect.value = currentCountry;
+countrySelect.addEventListener("change", () => {
+  currentCountry = countrySelect.value;
+  loadStations(currentCountry);
+});
 
 function formatPlays(n) {
   if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "K";
   return String(n);
 }
 
-async function loadStations() {
-  musicGrid.innerHTML = `<div class="music-grid-loading">Cargando radios peruanas en vivo…</div>`;
-  const data = await radioApiGet("/json/stations/bycountry/Peru?limit=30&order=clickcount&reverse=true&hidebroken=true");
+async function loadStations(country = currentCountry) {
+  currentCountry = country;
+  musicGrid.innerHTML = `<div class="music-grid-loading">Cargando radios en vivo…</div>`;
+  const data = await radioApiGet(`/json/stations/bycountry/${encodeURIComponent(country)}?limit=30&order=clickcount&reverse=true&hidebroken=true`);
 
   let list = [];
   if (data && Array.isArray(data)) {
@@ -132,7 +165,12 @@ async function loadStations() {
       .slice(0, 12);
   }
 
-  stations = list.length ? list : DEMO_STATIONS;
+  stations = list.length ? list : (country === "Peru" ? DEMO_STATIONS : []);
+  if (!stations.length) {
+    musicGrid.innerHTML = `<div class="music-grid-loading">No se encontraron radios en vivo para este país, prueba con otro.</div>`;
+    trendingList.innerHTML = "";
+    return;
+  }
   renderMusic();
   renderTrending();
 }
@@ -318,9 +356,13 @@ const tvScreen = document.getElementById("tvScreen");
 const tvChannelName = document.getElementById("tvChannelName");
 const tvInfoName = document.getElementById("tvInfoName");
 const tvYoutubeLink = document.getElementById("tvYoutubeLink");
+const tvTabs = document.getElementById("tvTabs");
 
-function renderChannels() {
-  tvChannelList.innerHTML = tvChannels.map((ch, i) => `
+let activeChannelList = tvChannels;
+
+function renderChannels(list) {
+  activeChannelList = list;
+  tvChannelList.innerHTML = list.map((ch, i) => `
     <div class="tv-channel-item ${i === 0 ? "active" : ""}" data-index="${i}">
       <div class="tv-channel-logo">${ch.initial}</div>
       <div>
@@ -333,10 +375,12 @@ function renderChannels() {
   document.querySelectorAll(".tv-channel-item").forEach(item => {
     item.addEventListener("click", () => selectChannel(Number(item.dataset.index)));
   });
+
+  selectChannel(0);
 }
 
 function selectChannel(i) {
-  const ch = tvChannels[i];
+  const ch = activeChannelList[i];
   tvChannelName.textContent = ch.name;
   tvInfoName.textContent = ch.name;
   tvYoutubeLink.href = `https://www.youtube.com/channel/${ch.channelId}/live`;
@@ -347,8 +391,15 @@ function selectChannel(i) {
   if (item) item.classList.add("active");
 }
 
-renderChannels();
-selectChannel(0);
+tvTabs.addEventListener("click", (e) => {
+  const tab = e.target.closest(".tv-tab");
+  if (!tab) return;
+  document.querySelectorAll(".tv-tab").forEach(t => t.classList.remove("active"));
+  tab.classList.add("active");
+  renderChannels(tab.dataset.scope === "intl" ? internationalChannels : tvChannels);
+});
+
+renderChannels(tvChannels);
 
 // ===== NOTICIAS =====
 const newsGrid = document.getElementById("newsGrid");
@@ -446,12 +497,12 @@ let aiStationCache = {};
 let aiCacheCounter = 0;
 
 async function searchStationsByTag(tag) {
-  let data = await radioApiGet(`/json/stations/bytagandcountry/${encodeURIComponent(tag)}/Peru?limit=8&order=clickcount&reverse=true&hidebroken=true`);
+  let data = await radioApiGet(`/json/stations/bytagandcountry/${encodeURIComponent(tag)}/${encodeURIComponent(currentCountry)}?limit=8&order=clickcount&reverse=true&hidebroken=true`);
   let list = Array.isArray(data) ? data : [];
 
   // Si no hay resultados por etiqueta exacta, buscamos por nombre de estación
   if (!list.length) {
-    data = await radioApiGet(`/json/stations/search?country=Peru&name=${encodeURIComponent(tag)}&limit=8&order=clickcount&reverse=true&hidebroken=true`);
+    data = await radioApiGet(`/json/stations/search?country=${encodeURIComponent(currentCountry)}&name=${encodeURIComponent(tag)}&limit=8&order=clickcount&reverse=true&hidebroken=true`);
     list = Array.isArray(data) ? data : [];
   }
 
@@ -475,8 +526,9 @@ function aiStationChip(station) {
   aiStationCache[key] = station;
   return `<button class="ai-chip" data-action="ai-station" data-key="${key}">▶ ${station.title}</button>`;
 }
-function channelChip(index) {
-  return `<button class="ai-chip" data-action="channel" data-index="${index}">📺 ${tvChannels[index].name}</button>`;
+function channelChip(scope, index) {
+  const ch = (scope === "intl" ? internationalChannels : tvChannels)[index];
+  return `<button class="ai-chip" data-action="channel" data-scope="${scope}" data-index="${index}">📺 ${ch.name}</button>`;
 }
 function premiereChip(index) {
   return `<button class="ai-chip" data-action="premiere" data-index="${index}">🎬 ${premieres[index].title}</button>`;
@@ -502,6 +554,9 @@ aiMessages.addEventListener("click", (e) => {
       document.getElementById("musica").scrollIntoView({ behavior: "smooth" });
     }
   } else if (action === "channel") {
+    const scope = chip.dataset.scope || "pe";
+    document.querySelectorAll(".tv-tab").forEach(t => t.classList.toggle("active", t.dataset.scope === scope));
+    renderChannels(scope === "intl" ? internationalChannels : tvChannels);
     selectChannel(Number(chip.dataset.index));
     document.getElementById("tv").scrollIntoView({ behavior: "smooth" });
   } else if (action === "premiere") {
@@ -524,6 +579,7 @@ function renderQuickSuggestions() {
     "Algo para relajarme",
     "Estrenos de hoy",
     "Sugiéreme un canal",
+    "Canal internacional",
   ].map(q => `<button class="ai-chip">${q}</button>`).join("");
 
   aiSuggestions.querySelectorAll(".ai-chip").forEach(btn => {
@@ -562,14 +618,18 @@ function aiGenerateReply(rawText) {
   }
 
   // TV / canales
+  if (/(internacional|mundo|extranjer)/.test(text) && /(canal|tv|television|televisión)/.test(text)) {
+    const random = internationalChannels.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, 3);
+    return () => aiRespondWithChips(
+      "Estos canales internacionales están en vivo:",
+      random.map(i => channelChip("intl", i)).join("")
+    );
+  }
   if (/(canal|tv|television|televisión|noticias en vivo)/.test(text)) {
-    const random = tvChannels
-      .map((_, i) => i)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3);
+    const random = tvChannels.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, 3);
     return () => aiRespondWithChips(
       "Te recomiendo estos canales en vivo:",
-      random.map(i => channelChip(i)).join("")
+      random.map(i => channelChip("pe", i)).join("")
     );
   }
 

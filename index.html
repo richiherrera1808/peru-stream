@@ -40,6 +40,10 @@
   <div class="section-header">
     <h2>🎵 Música</h2>
     <p>Radios en vivo y playlists destacadas</p>
+    <div class="country-select-wrap">
+      <label for="countrySelect">País:</label>
+      <select id="countrySelect"></select>
+    </div>
   </div>
 
   <div class="music-grid" id="musicGrid"></div>
@@ -89,8 +93,13 @@
 <!-- TV EN VIVO -->
 <section class="section section-alt" id="tv">
   <div class="section-header">
-    <h2>📺 Canales de TV Peruanos en Vivo</h2>
+    <h2>📺 Canales de TV en Vivo</h2>
     <p>Transmisión oficial vía YouTube en vivo — selecciona un canal</p>
+  </div>
+
+  <div class="tv-tabs" id="tvTabs">
+    <button class="tv-tab active" data-scope="pe">🇵🇪 Perú</button>
+    <button class="tv-tab" data-scope="intl">🌎 Internacional</button>
   </div>
 
   <div class="tv-layout">
