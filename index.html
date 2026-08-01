@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PerúStream - Música, TV y Noticias en Vivo</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">Perú<span>Stream</span></div>
+    <nav class="nav" id="nav">
+      <a href="#inicio" class="nav-link active">Inicio</a>
+      <a href="#musica" class="nav-link">Música</a>
+      <a href="#tendencias" class="nav-link">Tendencias</a>
+      <a href="#estrenos" class="nav-link">Estrenos</a>
+      <a href="#tv" class="nav-link">TV en Vivo</a>
+      <a href="#noticias" class="nav-link">Noticias</a>
+      <a href="#" class="nav-link" id="chatToggleLink">Chat</a>
+    </nav>
+    <button class="menu-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
+  </div>
+</header>
+
+<section class="hero" id="inicio">
+  <div class="hero-content">
+    <h1>Toda la música, TV y noticias del Perú, en un solo lugar</h1>
+    <p>Escucha radios y playlists, mira canales peruanos en vivo, entérate de las noticias y chatea en tiempo real con la comunidad.</p>
+    <div class="hero-buttons">
+      <a href="#musica" class="btn btn-primary">Escuchar música</a>
+      <a href="#tv" class="btn btn-outline">Ver TV en vivo</a>
+    </div>
+  </div>
+</section>
+
+<!-- MÚSICA -->
+<section class="section" id="musica">
+  <div class="section-header">
+    <h2>🎵 Música</h2>
+    <p>Radios en vivo y playlists destacadas</p>
+  </div>
+
+  <div class="music-grid" id="musicGrid"></div>
+
+  <div class="player-bar" id="playerBar">
+    <div class="player-track">
+      <img id="playerCover" src="" alt="" class="player-cover">
+      <div>
+        <div class="player-title" id="playerTitle">Selecciona una canción</div>
+        <div class="player-artist" id="playerArtist">—</div>
+      </div>
+    </div>
+    <div class="player-controls">
+      <button id="prevBtn" class="player-btn">⏮</button>
+      <button id="playBtn" class="player-btn play">▶</button>
+      <button id="nextBtn" class="player-btn">⏭</button>
+    </div>
+    <div class="player-progress">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div class="player-volume">
+      🔊 <input type="range" id="volumeSlider" min="0" max="100" value="70">
+    </div>
+  </div>
+  <audio id="audioPlayer"></audio>
+</section>
+
+<!-- TENDENCIAS / MÁS SONADAS -->
+<section class="section section-alt" id="tendencias">
+  <div class="section-header">
+    <h2>🔥 Más Sonadas</h2>
+    <p>El ranking de la semana, actualizado con lo que la comunidad más escucha</p>
+  </div>
+  <div class="trending-list" id="trendingList"></div>
+</section>
+
+<!-- ESTRENOS -->
+<section class="section" id="estrenos">
+  <div class="section-header">
+    <h2>🎬 Estrenos de Video</h2>
+    <p>Lo más nuevo en videoclips, entrevistas y documentales</p>
+  </div>
+  <div class="premiere-grid" id="premiereGrid"></div>
+</section>
+
+<!-- TV EN VIVO -->
+<section class="section section-alt" id="tv">
+  <div class="section-header">
+    <h2>📺 Canales de TV Peruanos en Vivo</h2>
+    <p>Selecciona un canal para verlo (contenido de demostración)</p>
+  </div>
+
+  <div class="tv-layout">
+    <div class="tv-player">
+      <div class="tv-screen" id="tvScreen">
+        <div class="tv-placeholder">
+          <span id="tvChannelName">América TV</span>
+          <small>Transmisión de demostración</small>
+        </div>
+      </div>
+      <div class="tv-info">
+        <strong id="tvInfoName">América TV</strong>
+        <span class="live-badge">● EN VIVO</span>
+      </div>
+    </div>
+    <div class="tv-channel-list" id="tvChannelList"></div>
+  </div>
+</section>
+
+<!-- NOTICIAS -->
+<section class="section" id="noticias">
+  <div class="section-header">
+    <h2>📰 Noticias</h2>
+    <p>Lo último en actualidad, música y entretenimiento</p>
+  </div>
+  <div class="news-grid" id="newsGrid"></div>
+</section>
+
+<footer class="footer">
+  <p>&copy; 2026 PerúStream — Plataforma multimedia de demostración.</p>
+</footer>
+
+<!-- MODAL DE VIDEO (ESTRENOS) -->
+<div class="video-modal" id="videoModal">
+  <div class="video-modal-content">
+    <button class="video-modal-close" id="videoModalClose">✕</button>
+    <div class="video-modal-screen" id="videoModalScreen">
+      <span id="videoModalEmoji">🎬</span>
+    </div>
+    <div class="video-modal-info">
+      <strong id="videoModalTitle">Título</strong>
+      <span id="videoModalChannel">Canal</span>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT INTERACTIVO (comunidad) -->
+<div class="chat-widget" id="chatWidget">
+  <div class="chat-header" id="chatHeader">
+    <span>💬 Chat en vivo</span>
+    <button id="chatCloseBtn">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <form class="chat-form" id="chatForm">
+    <input type="text" id="chatInput" placeholder="Escribe un mensaje..." autocomplete="off">
+    <button type="submit">➤</button>
+  </form>
+</div>
+<button class="chat-fab" id="chatFab" title="Chat en vivo">💬</button>
+
+<!-- AGENTE DE IA -->
+<div class="ai-widget" id="aiWidget">
+  <div class="ai-header" id="aiHeader">
+    <span>🤖 Asistente IA · PerúStream</span>
+    <button id="aiCloseBtn">✕</button>
+  </div>
+  <div class="ai-messages" id="aiMessages"></div>
+  <div class="ai-suggestions" id="aiSuggestions"></div>
+  <form class="chat-form" id="aiForm">
+    <input type="text" id="aiInput" placeholder="Pídeme una recomendación..." autocomplete="off">
+    <button type="submit">➤</button>
+  </form>
+</div>
+<button class="ai-fab" id="aiFab" title="Asistente IA">🤖</button>
+
+<script src="js/script.js"></script>
+</body>
+</html>
