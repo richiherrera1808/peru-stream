@@ -149,6 +149,38 @@ countrySelect.addEventListener("change", () => {
   loadStations(currentCountry);
 });
 
+// Radios agregadas manualmente por el usuario (persisten en este navegador)
+let customStations = JSON.parse(localStorage.getItem("perustream_custom_radios") || "[]");
+
+const addRadioToggle = document.getElementById("addRadioToggle");
+const addRadioForm = document.getElementById("addRadioForm");
+addRadioToggle.addEventListener("click", () => {
+  addRadioForm.hidden = !addRadioForm.hidden;
+});
+addRadioForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = document.getElementById("addRadioName").value.trim();
+  const url = document.getElementById("addRadioUrl").value.trim();
+  if (!name || !url) return;
+
+  const newStation = {
+    title: name,
+    artist: "Radio agregada por ti",
+    emoji: "📻",
+    url,
+    isHls: /\.m3u8($|\?)/i.test(url),
+    plays: 0,
+    trend: "same",
+    isCustom: true,
+  };
+  customStations.push(newStation);
+  stations.push(newStation);
+  localStorage.setItem("perustream_custom_radios", JSON.stringify(customStations));
+  addRadioForm.reset();
+  addRadioForm.hidden = true;
+  renderMusic();
+});
+
 function formatPlays(n) {
   if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "K";
   return String(n);
@@ -167,7 +199,7 @@ async function loadStations(country = currentCountry) {
       .slice(0, 12);
   }
 
-  stations = list.length ? list : (country === "Peru" ? DEMO_STATIONS : []);
+  stations = (list.length ? list : (country === "Peru" ? DEMO_STATIONS : [])).concat(customStations);
   if (!stations.length) {
     musicGrid.innerHTML = `<div class="music-grid-loading">No se encontraron radios en vivo para este país, prueba con otro.</div>`;
     trendingList.innerHTML = "";
@@ -384,18 +416,35 @@ videoModal.addEventListener("click", (e) => { if (e.target === videoModal) video
 
 renderPremieres();
 
-// ===== TV EN VIVO (transmisión oficial de cada canal vía YouTube) =====
+// ===== TV EN VIVO (transmisión oficial de cada canal vía YouTube + canales propios) =====
 const tvChannelList = document.getElementById("tvChannelList");
 const tvScreen = document.getElementById("tvScreen");
 const tvChannelName = document.getElementById("tvChannelName");
 const tvInfoName = document.getElementById("tvInfoName");
 const tvYoutubeLink = document.getElementById("tvYoutubeLink");
 const tvTabs = document.getElementById("tvTabs");
+const tvCustomPanel = document.getElementById("tvCustomPanel");
+const addChannelForm = document.getElementById("addChannelForm");
 
+// Canales agregados manualmente por el usuario (persisten en este navegador)
+let customChannels = JSON.parse(localStorage.getItem("perustream_custom_channels") || "[]");
 let activeChannelList = tvChannels;
+let activeScope = "pe";
+let tvHlsInstance = null;
 
-function renderChannels(list) {
+function renderChannels(list, scope) {
   activeChannelList = list;
+  activeScope = scope;
+  tvCustomPanel.hidden = scope !== "custom";
+
+  if (!list.length) {
+    tvChannelList.innerHTML = `<div class="music-grid-loading">Aún no agregaste ningún canal. Usa el formulario de arriba.</div>`;
+    tvScreen.innerHTML = `<div class="tv-placeholder"><span>Sin canales</span><small>Agrega uno con el formulario</small></div>`;
+    tvChannelName.textContent = "—";
+    tvInfoName.textContent = "—";
+    return;
+  }
+
   tvChannelList.innerHTML = list.map((ch, i) => `
     <div class="tv-channel-item ${i === 0 ? "active" : ""}" data-index="${i}">
       <div class="tv-channel-logo">${ch.initial}</div>
@@ -403,11 +452,24 @@ function renderChannels(list) {
         <div class="tv-channel-name">${ch.name}</div>
         <div class="tv-channel-cat">${ch.cat}</div>
       </div>
+      ${scope === "custom" ? `<button type="button" class="tv-channel-remove" data-remove="${i}" title="Quitar">✕</button>` : ""}
     </div>
   `).join("");
 
   document.querySelectorAll(".tv-channel-item").forEach(item => {
-    item.addEventListener("click", () => selectChannel(Number(item.dataset.index)));
+    item.addEventListener("click", (e) => {
+      if (e.target.closest(".tv-channel-remove")) return;
+      selectChannel(Number(item.dataset.index));
+    });
+  });
+
+  document.querySelectorAll(".tv-channel-remove").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.dataset.remove);
+      customChannels.splice(idx, 1);
+      localStorage.setItem("perustream_custom_channels", JSON.stringify(customChannels));
+      renderChannels(customChannels, "custom");
+    });
   });
 
   selectChannel(0);
@@ -415,14 +477,48 @@ function renderChannels(list) {
 
 function selectChannel(i) {
   const ch = activeChannelList[i];
+  if (!ch) return;
   tvChannelName.textContent = ch.name;
   tvInfoName.textContent = ch.name;
-  tvYoutubeLink.href = `https://www.youtube.com/channel/${ch.channelId}/live`;
-  tvScreen.innerHTML = `<iframe src="https://www.youtube.com/embed/live_stream?channel=${ch.channelId}&autoplay=1&mute=1" title="${ch.name} en vivo" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+
+  if (tvHlsInstance) { tvHlsInstance.destroy(); tvHlsInstance = null; }
+
+  if (ch.channelId) {
+    tvYoutubeLink.style.display = "";
+    tvYoutubeLink.href = `https://www.youtube.com/channel/${ch.channelId}/live`;
+    tvScreen.innerHTML = `<iframe src="https://www.youtube.com/embed/live_stream?channel=${ch.channelId}&autoplay=1&mute=1" title="${ch.name} en vivo" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  } else if (ch.url) {
+    tvYoutubeLink.style.display = "none";
+    renderCustomSource(ch.url);
+  }
 
   document.querySelectorAll(".tv-channel-item").forEach(c => c.classList.remove("active"));
   const item = document.querySelector(`.tv-channel-item[data-index="${i}"]`);
   if (item) item.classList.add("active");
+}
+
+function renderCustomSource(url) {
+  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|live\/|embed\/))([\w-]{6,})/);
+  if (ytMatch) {
+    tvScreen.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    return;
+  }
+
+  tvScreen.innerHTML = `<video id="tvCustomVideo" controls autoplay muted playsinline></video>`;
+  const videoEl = document.getElementById("tvCustomVideo");
+  const isHls = /\.m3u8($|\?)/i.test(url);
+
+  if (isHls && !videoEl.canPlayType("application/vnd.apple.mpegurl")) {
+    if (typeof Hls !== "undefined" && Hls.isSupported()) {
+      tvHlsInstance = new Hls();
+      tvHlsInstance.loadSource(url);
+      tvHlsInstance.attachMedia(videoEl);
+    } else {
+      tvScreen.innerHTML = `<div class="tv-placeholder"><span>No soportado</span><small>Tu navegador no puede reproducir este stream</small></div>`;
+    }
+  } else {
+    videoEl.src = url;
+  }
 }
 
 tvTabs.addEventListener("click", (e) => {
@@ -430,10 +526,25 @@ tvTabs.addEventListener("click", (e) => {
   if (!tab) return;
   document.querySelectorAll(".tv-tab").forEach(t => t.classList.remove("active"));
   tab.classList.add("active");
-  renderChannels(tab.dataset.scope === "intl" ? internationalChannels : tvChannels);
+  const scope = tab.dataset.scope;
+  if (scope === "intl") renderChannels(internationalChannels, "intl");
+  else if (scope === "custom") renderChannels(customChannels, "custom");
+  else renderChannels(tvChannels, "pe");
 });
 
-renderChannels(tvChannels);
+addChannelForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = document.getElementById("addChannelName").value.trim();
+  const url = document.getElementById("addChannelUrl").value.trim();
+  if (!name || !url) return;
+
+  customChannels.push({ name, url, cat: "Personalizado", initial: name.charAt(0).toUpperCase() });
+  localStorage.setItem("perustream_custom_channels", JSON.stringify(customChannels));
+  addChannelForm.reset();
+  renderChannels(customChannels, "custom");
+});
+
+renderChannels(tvChannels, "pe");
 
 // ===== NOTICIAS =====
 const newsGrid = document.getElementById("newsGrid");
@@ -590,7 +701,7 @@ aiMessages.addEventListener("click", (e) => {
   } else if (action === "channel") {
     const scope = chip.dataset.scope || "pe";
     document.querySelectorAll(".tv-tab").forEach(t => t.classList.toggle("active", t.dataset.scope === scope));
-    renderChannels(scope === "intl" ? internationalChannels : tvChannels);
+    renderChannels(scope === "intl" ? internationalChannels : tvChannels, scope);
     selectChannel(Number(chip.dataset.index));
     document.getElementById("tv").scrollIntoView({ behavior: "smooth" });
   } else if (action === "premiere") {

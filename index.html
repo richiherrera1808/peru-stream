@@ -43,7 +43,14 @@
     <div class="country-select-wrap">
       <label for="countrySelect">País:</label>
       <select id="countrySelect"></select>
+      <button type="button" id="addRadioToggle" class="btn-add-toggle">+ Agregar radio por URL</button>
     </div>
+    <form id="addRadioForm" class="add-source-form" hidden>
+      <input type="text" id="addRadioName" placeholder="Nombre de la radio" required>
+      <input type="url" id="addRadioUrl" placeholder="URL del stream (mp3, aac o m3u8)" required>
+      <button type="submit">Agregar</button>
+      <p class="add-source-hint">Agrega solo streams que tengas derecho a transmitir (tu propia radio, una emisora oficial, contenido de dominio público).</p>
+    </form>
   </div>
 
   <div class="music-grid" id="musicGrid"></div>
@@ -100,6 +107,16 @@
   <div class="tv-tabs" id="tvTabs">
     <button class="tv-tab active" data-scope="pe">🇵🇪 Perú</button>
     <button class="tv-tab" data-scope="intl">🌎 Internacional</button>
+    <button class="tv-tab" data-scope="custom">➕ Mis canales</button>
+  </div>
+
+  <div class="tv-custom-panel" id="tvCustomPanel" hidden>
+    <form id="addChannelForm" class="add-source-form">
+      <input type="text" id="addChannelName" placeholder="Nombre del canal" required>
+      <input type="url" id="addChannelUrl" placeholder="URL del stream (m3u8, mp4 o link de YouTube)" required>
+      <button type="submit">Agregar</button>
+    </form>
+    <p class="add-source-hint">Agrega solo fuentes que tengas derecho a transmitir (tu propio canal, uno oficial, o contenido de dominio público).</p>
   </div>
 
   <div class="tv-layout">
